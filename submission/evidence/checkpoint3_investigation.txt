@@ -1,0 +1,69 @@
+Day 13 K3 Observability Challenge — Investigation Log
+Challenge ID: day13-k3-observability-v1 | Cohort: K3 | Incident: rag_slow | affected_feature: refund
+latency_threshold_ms (challenge): 2000
+
+=== 1. Baseline (incident disabled) ===
+python scripts/load_test.py --challenge
+[200] req-e671cee6 | refund | 161.5ms
+[200] req-5efdee99 | refund | 159.3ms
+[200] req-bdc530b1 | refund | 157.0ms
+[200] req-d7df8ae3 | refund | 157.9ms
+[200] req-9f54dd0c | refund | 156.9ms
+
+=== 2. Incident enabled ===
+python scripts/inject_incident.py
+-> 200 {'ok': True, 'incidents': {'rag_slow': True, 'tool_fail': False, 'cost_spike': False}}
+
+python scripts/load_test.py --challenge
+[200] req-20f30a28 | refund | 2659.9ms
+[200] req-73324525 | refund | 2658.9ms
+[200] req-89ac73a9 | refund | 2660.9ms
+[200] req-356ec3f2 | refund | 2661.5ms
+[200] req-b3ea75a5 | refund | 2660.0ms
+
+=== 3. Symptom from /metrics ===
+GET /metrics (during incident):
+{"traffic":11,"latency_p50":622.0,"latency_p95":2653.0,"latency_p99":2653.0,
+ "avg_cost_usd":0.0021,"total_cost_usd":0.0227,"tokens_in_total":353,
+ "tokens_out_total":1440,"error_breakdown":{},"quality_avg":0.8636}
+-> latency_p95 2653ms > challenge threshold 2000ms (dashboard SLO of 3000ms not yet
+   breached, but challenge's stricter 2000ms threshold is). No error_rate increase,
+   no cost/quality anomaly -> points at a pure latency incident, not a failure/cost incident.
+
+=== 4. Localize with trace waterfall ===
+Trace: f725566f4de3f74e425422e0c4083e47
+URL: https://jp.cloud.langfuse.com/project/cmso2iqfp003uad0iesi6ljh6/traces/f725566f4de3f74e425422e0c4083e47
+session_id=k3-challenge-s03 user_id_hash=b7fde6ae11b0 tags=[claude-sonnet-4-5, lab, refund]
+
+Observations (sorted by start time):
+GENERATION name=run           duration=2.66s  parent=None
+SPAN       name=retrieve_docs duration=2.507s parent=<run>
+SPAN       name=llm_call      duration=0.153s parent=<run>
+
+-> retrieve_docs accounts for 2.507s of the 2.66s total (94%). llm_call duration
+   (0.153s) matches the normal baseline for FakeLLM.generate(). The abnormal span
+   is unambiguously retrieve_docs.
+
+=== 5. Root cause from logs (same session, correlation IDs) ===
+Baseline request (incident off, same query "Explain the refund window and required evidence."):
+  correlation_id=req-9f54dd0c  event=response_sent  latency_ms=151  ts=2026-08-11T15:21:07Z
+
+Incident request (same query, same session s03):
+  correlation_id=req-b3ea75a5  event=response_sent  latency_ms=2653 ts=2026-08-11T15:24:04Z
+  (request_received ts=2026-08-11T15:24:02.339861Z matches trace start time exactly)
+
+-> Same query, same session, ~2500ms delta isolated to one deploy state change
+   (rag_slow enabled). Combined with the trace breakdown, this confirms the delay
+   is injected inside app/mock_rag.py:retrieve() (time.sleep(2.5) when
+   STATE["rag_slow"] is True), not in prompt fetch or LLM generation.
+
+=== 6. Recovery check (incident disabled) ===
+python scripts/inject_incident.py --disable
+-> 200 {'ok': True, 'incidents': {'rag_slow': False, 'tool_fail': False, 'cost_spike': False}}
+
+curl -X POST /chat (same feature=refund query)
+-> latency_ms=151 (back to baseline)
+
+=== Evidence files ===
+- checkpoint3_dashboard_incident.png: Streamlit latency panel showing the spike
+  (~157ms -> 2653ms) between 10:21 and 10:23 in the time series.

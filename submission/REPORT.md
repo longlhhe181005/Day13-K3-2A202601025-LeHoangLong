@@ -42,13 +42,16 @@
 
 ## 6. Điều tra challenge
 
-- Challenge ID:
-- Triệu chứng từ metrics:
-- Trace ID liên quan:
-- Log line/correlation ID liên quan:
-- Root cause:
-- Fix action:
-- Preventive measure:
+- Challenge ID: `day13-k3-observability-v1` (cohort K3, incident chính thức: `rag_slow`, feature bị ảnh hưởng: `refund`, `latency_threshold_ms=2000`)
+- Triệu chứng từ metrics: `GET /metrics` trong lúc incident bật cho thấy `latency_p95` nhảy từ baseline ~157ms lên **2653ms** (vượt threshold 2000ms của challenge), trong khi `error_breakdown={}` và `quality_avg` không đổi → khoanh vùng đây là sự cố latency thuần túy, không phải lỗi hay cost. Xem `submission/evidence/checkpoint3_dashboard_incident.png` (panel Latency percentiles tăng vọt từ ~157ms lên 2653ms).
+- Trace ID liên quan: `f725566f4de3f74e425422e0c4083e47` — https://jp.cloud.langfuse.com/project/cmso2iqfp003uad0iesi6ljh6/traces/f725566f4de3f74e425422e0c4083e47
+  - Waterfall: `run` (2.66s tổng) → span con `retrieve_docs` (**2.507s**, ~94% tổng thời gian) + span con `llm_call` (0.153s, đúng baseline bình thường) → span bất thường là `retrieve_docs`.
+- Log line/correlation ID liên quan (cùng session `k3-challenge-s03`, cùng câu hỏi, khác trạng thái incident):
+  - Baseline: `correlation_id=req-9f54dd0c`, `latency_ms=151`
+  - Lúc có incident: `correlation_id=req-b3ea75a5`, `latency_ms=2653`, timestamp `request_received` khớp chính xác với thời điểm bắt đầu trace ở trên
+- Root cause: `app/mock_rag.py:retrieve()` có `time.sleep(2.5)` khi `STATE["rag_slow"]` bật (do `scripts/inject_incident.py` gọi `POST /incidents/rag_slow/enable` theo đúng `config/challenge.json`). Đây là nguyên nhân duy nhất của độ trễ — không liên quan tới prompt fetch hay LLM generation (đã tách riêng span để loại trừ).
+- Fix action: tắt incident bằng `python scripts/inject_incident.py --disable` (đã xác nhận latency về lại 151ms). Trong tình huống thật, cần thêm timeout + fallback cho bước retrieve (vd trả corpus rỗng/cached kèm cảnh báo) thay vì để request treo hết thời gian chờ vector store.
+- Preventive measure: thêm alert riêng cho `retrieve_docs` span duration (không chỉ tổng latency) để phát hiện sớm tầng nào chậm; đặt timeout cứng cho lệnh gọi vector store; thêm circuit breaker/fallback corpus khi vector store timeout, tránh lặp lại kiểu lỗi `tool_fail` (raise ngay) hay `rag_slow` (treo) ảnh hưởng toàn bộ pipeline.
 
 ## 7. Đóng góp cá nhân
 
