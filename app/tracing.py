@@ -35,3 +35,7 @@ def tracing_enabled() -> bool:
     return LANGFUSE_SDK_AVAILABLE and bool(
         os.getenv("LANGFUSE_PUBLIC_KEY") and os.getenv("LANGFUSE_SECRET_KEY")
     )
+
+
+def langfuse_host() -> str:
+    return os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
