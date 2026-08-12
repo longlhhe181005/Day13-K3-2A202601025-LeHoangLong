@@ -38,7 +38,11 @@
 - Kết quả `validate_dashboard.py`: HỢP LỆ — 6/6 panel đúng contract (xem `submission/evidence/checkpoint2_validators.txt`)
 - Evidence dashboard: `submission/evidence/checkpoint2_dashboard.png` (chụp lúc chạy `streamlit run scripts/dashboard.py`, có đủ 6 panel + badge SLO PASS/FAIL)
 - SLO đã chọn và lý do: giữ nguyên threshold trong `config/dashboard.yaml` — latency P95 ≤ 3000ms, traffic ≥ 1 req/phút, error rate ≤ 2%, cost ≤ 2.5 USD/cửa sổ, tokens ≤ 50000, quality mean ≥ 0.75 (theo đúng contract chấm điểm, không tự đổi)
-- Alert rules và runbook: xem `config/alert_rules.yaml` và `docs/alerts.md` (chưa test runtime trong buổi này)
+- Alert rules và runbook: 3 alert trong `config/alert_rules.yaml` + `docs/alerts.md`, mỗi alert map với 1 SLI trong `config/slo.yaml` và 1 incident giả lập của lab để dễ demo:
+  - `high_response_latency` (latency_p95_ms > 3000/5m) ↔ incident `rag_slow`
+  - `elevated_error_rate` (error_rate_pct > 2%/5m) ↔ incident `tool_fail`
+  - `cost_spike` (sum cost_usd 60m > 2.5 USD, 2 lần liên tiếp) ↔ incident `cost_spike`
+  Chưa test runtime triggering thật (chưa gắn hệ thống cảnh báo, mới dừng ở định nghĩa điều kiện + runbook 3 bước kiểm tra đầu tiên cho từng alert).
 
 ## 6. Điều tra challenge
 
