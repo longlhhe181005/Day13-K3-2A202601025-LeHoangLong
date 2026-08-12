@@ -29,9 +29,11 @@
 - Trace ID của mỗi version:
   - baseline/v1: `193ba6669f2eeca2ae1426476be5e12d` — https://jp.cloud.langfuse.com/project/cmso2iqfp003uad0iesi6ljh6/traces/193ba6669f2eeca2ae1426476be5e12d
   - candidate/v2: `ca8f55cde03e50ece4e9b7d9f77f9b88` — https://jp.cloud.langfuse.com/project/cmso2iqfp003uad0iesi6ljh6/traces/ca8f55cde03e50ece4e9b7d9f77f9b88
+- Ảnh danh sách version: `submission/evidence/checkpoint2_prompt_versions.PNG` (trang Prompts → `day13-chat`, liệt kê v1 `production/baseline` và v2 `latest/candidate` kèm nội dung text prompt v1)
 - Bằng chứng đổi label hoặc rollback:
   - Đổi `production` → v2: trace `a561838091f5001179fa102378ec1ae7` — https://jp.cloud.langfuse.com/project/cmso2iqfp003uad0iesi6ljh6/traces/a561838091f5001179fa102378ec1ae7
   - Rollback `production` → v1: trace `19d9a211e2ddaf488c9ed0e231a0d09b` — https://jp.cloud.langfuse.com/project/cmso2iqfp003uad0iesi6ljh6/traces/19d9a211e2ddaf488c9ed0e231a0d09b
+  - Ảnh trạng thái hiện tại: `submission/evidence/checkpoint2_prompt_versions.PNG` — cùng ảnh trên, xác nhận `production` đang gắn ở v1 (đã rollback), v2 chỉ còn `candidate`
 
 ## 5. Dashboard, SLO và alerts
 
