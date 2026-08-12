@@ -10,7 +10,7 @@
 ## 2. Kết quả kỹ thuật
 
 - Điểm `validate_logs.py`: 100/100 (xem `submission/evidence/checkpoint2_validators.txt`)
-- Tổng số traces: ≥14 traces trên Langfuse (10 từ `load_test.py --concurrency 5`, 2 so sánh baseline/candidate, 1 sau khi đổi label production, 1 sau khi rollback)
+- Tổng số traces: ≥14 traces trên Langfuse (10 từ `load_test.py --concurrency 5`, 2 so sánh baseline/candidate, 1 sau khi đổi label production, 1 sau khi rollback). Ảnh danh sách: `submission/evidence/checkpoint2_trace_waterfall.png` (bảng Tracing, Total ≈108 observation, filter Name: run=84, llm_call=12, retrieve_docs=12)
 - Số PII leak còn lại: 0 (email, số điện thoại VN, số thẻ đều được redact — kiểm chứng bằng `scripts/validate_logs.py` dùng `app.pii.PII_PATTERNS`)
 - Link/đường dẫn dashboard: chạy local bằng `streamlit run scripts/dashboard.py` → http://localhost:8502 (đọc trực tiếp `data/logs.jsonl` theo contract `config/dashboard.yaml`)
 
@@ -18,7 +18,7 @@
 
 - Evidence correlation ID: mỗi request có header `x-request-id` dạng `req-<8-hex>` (sinh trong `app/middleware.py`) và field `correlation_id` tương ứng trong `data/logs.jsonl`
 - Evidence PII redaction: `submission/evidence/checkpoint2_validators.txt` — 0 leak trên 82 log record; ví dụ `payload.message_preview` chứa `[REDACTED_EMAIL]`, `[REDACTED_PHONE_VN]`, `[REDACTED_CREDIT_CARD]`
-- Evidence trace waterfall: https://jp.cloud.langfuse.com/project/cmso2iqfp003uad0iesi6ljh6/traces/193ba6669f2eeca2ae1426476be5e12d
+- Evidence trace waterfall: `submission/evidence/checkpoint3_trace_waterfall.PNG` (trace `f725566f4de3f74e425422e0c4083e47` — cây `run` → span con `retrieve_docs` + `llm_call`, xem chi tiết root cause ở mục 6) — https://jp.cloud.langfuse.com/project/cmso2iqfp003uad0iesi6ljh6/traces/193ba6669f2eeca2ae1426476be5e12d
 - Giải thích một span đáng chú ý: generation span của `LabAgent.run` ghi metadata `prompt_name=day13-chat`, `prompt_label`, `prompt_version`, `prompt_source`, cùng usage/cost — dùng để đối chiếu prompt nào tạo ra câu trả lời nào
 
 ## 4. Prompt versioning
@@ -45,6 +45,7 @@
 - Challenge ID: `day13-k3-observability-v1` (cohort K3, incident chính thức: `rag_slow`, feature bị ảnh hưởng: `refund`, `latency_threshold_ms=2000`)
 - Triệu chứng từ metrics: `GET /metrics` trong lúc incident bật cho thấy `latency_p95` nhảy từ baseline ~157ms lên **2653ms** (vượt threshold 2000ms của challenge), trong khi `error_breakdown={}` và `quality_avg` không đổi → khoanh vùng đây là sự cố latency thuần túy, không phải lỗi hay cost. Xem `submission/evidence/checkpoint3_dashboard_incident.png` (panel Latency percentiles tăng vọt từ ~157ms lên 2653ms).
 - Trace ID liên quan: `f725566f4de3f74e425422e0c4083e47` — https://jp.cloud.langfuse.com/project/cmso2iqfp003uad0iesi6ljh6/traces/f725566f4de3f74e425422e0c4083e47
+  - Ảnh waterfall: `submission/evidence/checkpoint3_trace_waterfall.PNG`
   - Waterfall: `run` (2.66s tổng) → span con `retrieve_docs` (**2.507s**, ~94% tổng thời gian) + span con `llm_call` (0.153s, đúng baseline bình thường) → span bất thường là `retrieve_docs`.
 - Log line/correlation ID liên quan (cùng session `k3-challenge-s03`, cùng câu hỏi, khác trạng thái incident):
   - Baseline: `correlation_id=req-9f54dd0c`, `latency_ms=151`
