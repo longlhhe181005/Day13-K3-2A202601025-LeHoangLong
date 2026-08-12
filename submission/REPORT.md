@@ -2,10 +2,12 @@
 
 ## 1. Thông tin nhóm
 
-- Tên nhóm:
-- Repository URL:
-- Commit SHA cuối:
+- Tên nhóm: K3 - Lê Hoàng Long & Nguyễn Mạnh Hưng
+- Repository URL: https://github.com/longlhhe181005/Day13-K3-2A202601025-LeHoangLong
+- Commit SHA cuối: a608472e2f0d4c0c6dee84f4ff5ef3a2d8646501
 - Thành viên và vai trò:
+  - Lê Hoàng Long — Setup môi trường, Checkpoint 0-1: logging, correlation ID, PII redaction
+  - Nguyễn Mạnh Hưng — Checkpoint 2-3: dashboard, prompt versioning, điều tra challenge, alert rules
 
 ## 2. Kết quả kỹ thuật
 
@@ -66,4 +68,5 @@ Với mỗi thành viên, ghi rõ nhiệm vụ và link commit/PR tương ứng.
 
 | Thành viên | Phần việc | Commit/PR | Điều đã học |
 |---|---|---|---|
-| | | | |
+| Lê Hoàng Long | Setup môi trường (`SETUP.md`); Checkpoint 0 baseline `validate_logs.py`; Checkpoint 1: `CorrelationIdMiddleware` (sinh/propagate `req-<hex>`, bind structlog contextvars), enrich log với `user_id_hash`/`session_id`/`feature`/`model`/`env`, bật `scrub_event` processor, sửa regex `phone_vn` bỏ sót số 10 chữ số | `b644100` | Cách structlog contextvars lan truyền theo request qua middleware; thứ tự processor quyết định PII có bị lọt ra log hay không |
+| Nguyễn Mạnh Hưng | Checkpoint 2: dashboard Streamlit 6 panel đọc `data/logs.jsonl` theo `config/dashboard.yaml`, tạo prompt v1/v2 trên Langfuse + demo đổi label/rollback, sửa `.env` (`LANGFUSE_HOST`); Checkpoint 3: thêm span `retrieve_docs`/`llm_call`, điều tra challenge `rag_slow`, soạn `config/alert_rules.yaml` + `docs/alerts.md` | `b094388`, `3a8a2da`, `85e0e92`, `3c8f70a`, `a608472` | Cách dùng waterfall nhiều span để khoanh vùng root cause thay vì chỉ nhìn tổng latency; 1 biến env sai tên có thể khiến trace âm thầm rơi mất mà request vẫn trả 200 |
